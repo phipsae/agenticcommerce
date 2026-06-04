@@ -26,7 +26,7 @@ the best bananas are from ecuador
 ## Local development
 
 ```bash
-cd /home/parallels/agenticcomerce
+cd /home/parallels/agenticcommerce
 npm install
 cp .env.example .env
 npm run dev
@@ -65,7 +65,7 @@ Deploy with the Vercel CLI:
 ```bash
 npm install -g vercel
 vercel login
-cd /home/parallels/agenticcomerce
+cd /home/parallels/agenticcommerce
 vercel
 ```
 
