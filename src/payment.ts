@@ -2,6 +2,8 @@ import type { NextFunction, Request, Response } from "express";
 import { HTTPFacilitatorClient } from "@x402/core/server";
 import { ExactEvmScheme } from "@x402/evm/exact/server";
 import { paymentMiddleware, x402ResourceServer } from "@x402/express";
+import { createPaywall } from "@x402/paywall";
+import { evmPaywall } from "@x402/paywall/evm";
 import type { AppConfig } from "./config.js";
 
 export function createPaymentMiddleware(config: AppConfig) {
@@ -38,8 +40,18 @@ export function createPaymentMiddleware(config: AppConfig) {
     new ExactEvmScheme(),
   );
 
-  return paymentMiddleware(routeConfig, resourceServer, {
-    appName: config.agentName,
-    testnet: config.x402Network !== "eip155:8453",
-  });
+  const paywall = createPaywall()
+    .withNetwork(evmPaywall)
+    .withConfig({ appName: config.agentName })
+    .build();
+
+  return paymentMiddleware(
+    routeConfig,
+    resourceServer,
+    {
+      appName: config.agentName,
+      testnet: config.x402Network !== "eip155:8453",
+    },
+    paywall,
+  );
 }
