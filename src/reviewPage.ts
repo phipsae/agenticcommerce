@@ -10,6 +10,8 @@ export function reviewPage(config: AppConfig): string {
     tag1: "x402-paid-secret-delivery",
     tag2: "buyer-review",
     agentName: config.agentName,
+    payTo: config.x402PayTo,
+    chainId: config.erc8004ChainId,
   };
 
   return `<!DOCTYPE html>
@@ -52,6 +54,9 @@ export function reviewPage(config: AppConfig): string {
   <input id="endpoint">
   <label>Comment (stored fully on-chain in the feedback URI)</label>
   <textarea id="comment" rows="3" placeholder="Paid and received the secret."></textarea>
+  <label>Payment tx hash (optional, proof you actually paid)</label>
+  <input id="paymentTx" placeholder="0x... the USDC settlement tx of your x402 payment">
+  <div class="hint">Adds a proofOfPayment block so verifiers can check this wallet really paid the agent before reviewing.</div>
   <label>Reputation Registry contract</label>
   <input id="registry">
   <div class="hint">Canonical ERC-8004 Reputation Registry on Base mainnet.</div>
@@ -89,14 +94,23 @@ $("endpoint").value = prefill.endpoint;
 $("registry").value = prefill.reputationRegistry;
 
 function feedbackJson() {
-  return JSON.stringify({
+  const feedback = {
     type: "buyer-review",
     agent: prefill.agentName,
     endpoint: $("endpoint").value,
     score: Number($("value").value),
     tags: [$("tag1").value, $("tag2").value],
     comment: $("comment").value,
-  });
+  };
+  if ($("paymentTx").value.trim()) {
+    feedback.proofOfPayment = {
+      fromAddress: account ?? "<connect wallet>",
+      toAddress: prefill.payTo,
+      chainId: prefill.chainId,
+      txHash: $("paymentTx").value.trim(),
+    };
+  }
+  return JSON.stringify(feedback);
 }
 
 function feedbackUri() {
@@ -128,6 +142,7 @@ $("action").addEventListener("click", async () => {
       });
       btn.textContent = "Submit review on-chain";
       status("Connected: " + account + " (Base).", "ok");
+      refresh();
       btn.disabled = false;
       return;
     }
