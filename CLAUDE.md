@@ -38,6 +38,14 @@ Two deploy targets share one app factory:
 - `src/metadata.ts`: builds the ERC-8004 registration JSON and validation evidence JSON from config. `src/secret.ts` exports `SECRET` and its sha256 `secretHash`, referenced in both metadata and the paid response.
 - `scripts/`: standalone tsx scripts (viem) for ERC-8004 Identity/Reputation/Validation registry calls. Shared helpers in `scripts/lib.ts` (`getClients`, `mustEnv`, chain selection: 8453 Base, 84532 Base Sepolia). ABIs in `src/erc8004Abi.ts`.
 
+## Deployment facts (learned the hard way)
+
+- Production: https://agenticcommerce-mvp.vercel.app (Vercel project `agenticcommerce`, team `phipsaes-projects`, auto-deploys on push to main). Verified end to end with a real 1-cent USDC payment on Base mainnet.
+- Facilitators: `facilitator.x402.org` is dead; `x402.org/facilitator` is testnet-only; production uses `https://facilitator.payai.network` (Base mainnet, no API keys); Coinbase CDP requires API keys. Check with `curl <url>/supported`.
+- `vercel.json` needs `"framework": null` (Vercel's Express preset otherwise builds a broken second function from `src/app.ts`) and the repo needs the empty `public/` dir.
+- `app.set("trust proxy", true)` is required: without it the x402 middleware advertises an `http://` resource URL behind Vercel's proxy and the browser paywall fails with mixed-content "Failed to fetch".
+- `/secret` serves the `@x402/paywall` wallet UI for `Accept: text/html`, raw 402 JSON + `payment-required` header otherwise.
+
 ## Conventions
 
 - ESM throughout: relative imports use `.js` extensions even in `.ts` files.
