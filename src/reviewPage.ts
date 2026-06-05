@@ -6,6 +6,7 @@ import type { AppConfig } from "./config.js";
 export function reviewPage(config: AppConfig): string {
   const prefill = {
     reputationRegistry: config.erc8004ReputationRegistry ?? "",
+    identityRegistry: config.erc8004IdentityRegistry ?? "",
     endpoint: `${config.publicBaseUrl}/secret`,
     tag1: "x402-paid-secret-delivery",
     tag2: "buyer-review",
@@ -94,19 +95,25 @@ $("endpoint").value = prefill.endpoint;
 $("registry").value = prefill.reputationRegistry;
 
 function feedbackJson() {
+  // Off-chain feedback file per the EIP-8004 spec example: spec-named core
+  // fields, proofOfPayment top-level ("this can be used for x402 proof of payment").
   const feedback = {
-    type: "buyer-review",
-    agent: prefill.agentName,
+    agentRegistry: "eip155:" + prefill.chainId + ":" + prefill.identityRegistry,
+    agentId: Number($("agentId").value || 0),
+    clientAddress: "eip155:" + prefill.chainId + ":" + (account ?? "<connect wallet>"),
+    createdAt: new Date().toISOString(),
+    value: Number($("value").value),
+    valueDecimals: 0,
+    tag1: $("tag1").value,
+    tag2: $("tag2").value,
     endpoint: $("endpoint").value,
-    score: Number($("value").value),
-    tags: [$("tag1").value, $("tag2").value],
     comment: $("comment").value,
   };
   if ($("paymentTx").value.trim()) {
     feedback.proofOfPayment = {
       fromAddress: account ?? "<connect wallet>",
       toAddress: prefill.payTo,
-      chainId: prefill.chainId,
+      chainId: String(prefill.chainId),
       txHash: $("paymentTx").value.trim(),
     };
   }
