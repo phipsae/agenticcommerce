@@ -1,6 +1,7 @@
 import express from "express";
 import type { AppConfig } from "./config.js";
 import { agentRegistration, validationEvidence } from "./metadata.js";
+import { registerPage } from "./registerPage.js";
 import { createPaymentMiddleware } from "./payment.js";
 import { SECRET, secretHash } from "./secret.js";
 
@@ -24,6 +25,10 @@ export function createApp(config: AppConfig) {
 
   app.get("/validation/banana-secret.json", (_req, res) => {
     res.json(validationEvidence(config));
+  });
+
+  app.get("/register", (_req, res) => {
+    res.type("html").send(registerPage(config));
   });
 
   app.use(createPaymentMiddleware(config));

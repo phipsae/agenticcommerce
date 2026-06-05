@@ -93,6 +93,16 @@ describe("banana paid secret MVP", () => {
     });
   });
 
+  it("serves the on-chain registration page with prefilled values", async () => {
+    const res = await request(app).get("/register").expect(200);
+
+    expect(res.headers["content-type"]).toContain("text/html");
+    expect(res.text).toContain("0x8004A169FB4a3325136EB29fA0ceB6D2e539a432");
+    expect(res.text).toContain("https://banana.example/secret");
+    expect(res.text).toContain("0x1111111111111111111111111111111111111111");
+    expect(res.text).toContain("data:application/json;base64");
+  });
+
   it("has a health endpoint", async () => {
     const res = await request(app).get("/health").expect(200);
     expect(res.body).toEqual({ ok: true, service: "banana-secret-agent" });
