@@ -59,18 +59,19 @@ describe("banana paid secret MVP", () => {
       x402Support: true,
       active: true,
       supportedTrust: ["reputation", "validation"],
-      payments: {
-        protocol: "x402",
-        network: "eip155:8453",
-        price: "$0.01",
-        payTo: "0x1111111111111111111111111111111111111111",
-      },
     });
+    // Best practice: pricing as text in the description, payTo as agentWallet service.
+    expect(res.body.description).toContain("$0.01");
     expect(res.body.services).toContainEqual({
       name: "web",
       endpoint: "https://banana.example/secret",
       version: "x402-v2",
     });
+    expect(res.body.services).toContainEqual({
+      name: "agentWallet",
+      endpoint: "eip155:8453:0x1111111111111111111111111111111111111111",
+    });
+    expect(res.body.payments).toBeUndefined();
     expect(res.body.registrations).toContainEqual({
       agentRegistry: "eip155:8453:0x8004A169FB4a3325136EB29fA0ceB6D2e539a432",
       agentId: null,

@@ -90,23 +90,21 @@ for (const k of ["name", "description", "image", "endpoint", "payTo", "price"]) 
 $("registry").value = prefill.identityRegistry;
 
 function buildJson() {
+  // ERC-8004 best practice: payTo as an agentWallet service (CAIP-10),
+  // pricing as text in the description, no custom payment fields.
   return {
     type: "https://eips.ethereum.org/EIPS/eip-8004#registration-v1",
     name: $("name").value,
-    description: $("description").value,
+    description: $("description").value +
+      " Pricing: " + $("price").value + " per request via x402 (exact scheme) on " + prefill.network + ".",
     image: $("image").value,
-    services: [{ name: "web", endpoint: $("endpoint").value, version: "x402-v2" }],
+    services: [
+      { name: "web", endpoint: $("endpoint").value, version: "x402-v2" },
+      { name: "agentWallet", endpoint: "eip155:" + prefill.chainId + ":" + $("payTo").value },
+    ],
     x402Support: true,
     active: true,
     supportedTrust: ["reputation"],
-    payments: {
-      protocol: "x402",
-      scheme: "exact",
-      network: prefill.network,
-      price: $("price").value,
-      payTo: $("payTo").value,
-      facilitator: prefill.facilitator,
-    },
   };
 }
 
