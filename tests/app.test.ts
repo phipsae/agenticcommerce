@@ -16,6 +16,7 @@ describe("banana paid secret MVP", () => {
     agentImageUrl: "https://banana.example/banana.png",
     erc8004ChainId: 8453,
     erc8004IdentityRegistry: "0x8004A169FB4a3325136EB29fA0ceB6D2e539a432",
+    erc8004ReputationRegistry: "0x8004BAa17C55a88189AE136b182e5fdA19dE9b63",
   });
 
   it("returns x402-style HTTP 402 payment requirements when unpaid", async () => {
@@ -102,6 +103,16 @@ describe("banana paid secret MVP", () => {
     expect(res.text).toContain("https://banana.example/secret");
     expect(res.text).toContain("0x1111111111111111111111111111111111111111");
     expect(res.text).toContain("data:application/json;base64");
+  });
+
+  it("serves the review page with prefilled values", async () => {
+    const res = await request(app).get("/review").expect(200);
+
+    expect(res.headers["content-type"]).toContain("text/html");
+    expect(res.text).toContain("0x8004BAa17C55a88189AE136b182e5fdA19dE9b63");
+    expect(res.text).toContain("https://banana.example/secret");
+    expect(res.text).toContain("x402-paid-secret-delivery");
+    expect(res.text).toContain("giveFeedback");
   });
 
   it("has a health endpoint", async () => {
