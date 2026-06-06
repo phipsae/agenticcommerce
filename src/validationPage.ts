@@ -141,11 +141,31 @@ const validationAbi = [
 const $ = (id) => document.getElementById(id);
 const ZERO_HASH = "0x" + "0".repeat(64);
 const status = (id, msg, cls = "") => { $(id).textContent = msg; $(id).className = "status " + cls; };
+// e.details carries the wallet's raw error (names the bad param on -32602).
+const errMsg = (e) => e.details || e.shortMessage || e.message || String(e);
 const json = (v) => JSON.stringify(v, (_k, x) => typeof x === "bigint" ? x.toString() : x, 2);
 
 let account = null;
 let walletClient = null;
 let publicClient = null;
+
+// Make sure the wallet is really on Base Sepolia. Called on connect AND
+// before every transaction (wallets can silently stay on another chain,
+// which makes eth_sendTransaction fail with -32602 invalid params).
+async function ensureSepolia() {
+  const current = await walletClient.getChainId();
+  if (current === baseSepolia.id) return;
+  try {
+    await walletClient.switchChain({ id: baseSepolia.id });
+  } catch (e) {
+    // MetaMask reports -32603 "internal error" instead of the spec'd 4902
+    // when the chain isn't added yet, so on any failure that isn't a user
+    // rejection, add Base Sepolia and switch again.
+    if (e.code === 4001 || e.cause?.code === 4001) throw e;
+    await walletClient.addChain({ chain: baseSepolia });
+    await walletClient.switchChain({ id: baseSepolia.id });
+  }
+}
 
 function refreshHash() {
   $("requestHash").textContent = keccak256(stringToHex($("requestURI").value));
@@ -158,23 +178,14 @@ $("connect").addEventListener("click", async () => {
     if (!window.ethereum) { status("connectStatus", "No browser wallet found. Install MetaMask or Rabby.", "err"); return; }
     walletClient = createWalletClient({ chain: baseSepolia, transport: custom(window.ethereum) });
     [account] = await walletClient.requestAddresses();
-    try {
-      await walletClient.switchChain({ id: baseSepolia.id });
-    } catch (e) {
-      // MetaMask reports -32603 "internal error" instead of the spec'd 4902
-      // when the chain isn't added yet, so on any failure that isn't a user
-      // rejection, add Base Sepolia and switch again.
-      if (e.code === 4001 || e.cause?.code === 4001) throw e;
-      await walletClient.addChain({ chain: baseSepolia });
-      await walletClient.switchChain({ id: baseSepolia.id });
-    }
+    await ensureSepolia();
     publicClient = createPublicClient({ chain: baseSepolia, transport: custom(window.ethereum) });
     if (!$("validator").value) $("validator").value = account;
     for (const id of ["register", "request", "respond", "readStatus", "readSummary", "readList"]) $(id).disabled = false;
     $("connect").disabled = true;
     status("connectStatus", "Connected: " + account + " (Base Sepolia).", "ok");
   } catch (e) {
-    status("connectStatus", e.shortMessage || e.message || String(e), "err");
+    status("connectStatus", errMsg(e), "err");
   }
 });
 
@@ -190,6 +201,7 @@ $("register").addEventListener("click", async () => {
       supportedTrust: ["validation"],
     };
     const uri = "data:application/json;base64," + btoa(String.fromCharCode(...new TextEncoder().encode(JSON.stringify(registration))));
+    await ensureSepolia();
     status("registerStatus", "Sending transaction. Confirm in your wallet...");
     const hash = await walletClient.writeContract({
       address: prefill.identityRegistry, abi: identityAbi, functionName: "register", args: [uri], account,
@@ -210,7 +222,7 @@ $("register").addEventListener("click", async () => {
       status("registerStatus", "Confirmed, but could not decode the agentId. Check: https://sepolia.basescan.org/tx/" + hash, "ok");
     }
   } catch (e) {
-    status("registerStatus", e.shortMessage || e.message || String(e), "err");
+    status("registerStatus", errMsg(e), "err");
   } finally {
     btn.disabled = false;
   }
@@ -222,6 +234,7 @@ $("request").addEventListener("click", async () => {
     if ($("agentId").value === "") { status("requestStatus", "Enter the agentId first (run step 0).", "err"); return; }
     btn.disabled = true;
     const requestHash = keccak256(stringToHex($("requestURI").value));
+    await ensureSepolia();
     status("requestStatus", "Sending transaction. Confirm in your wallet...");
     const hash = await walletClient.writeContract({
       address: prefill.validationRegistry, abi: validationAbi, functionName: "validationRequest",
@@ -233,7 +246,7 @@ $("request").addEventListener("click", async () => {
     $("respondHash").value = requestHash;
     status("requestStatus", "Validation requested! requestHash = " + requestHash + ". View: https://sepolia.basescan.org/tx/" + hash, "ok");
   } catch (e) {
-    status("requestStatus", e.shortMessage || e.message || String(e), "err");
+    status("requestStatus", errMsg(e), "err");
   } finally {
     btn.disabled = false;
   }
@@ -246,6 +259,7 @@ $("respond").addEventListener("click", async () => {
     btn.disabled = true;
     const responseURI = $("responseURI").value.trim();
     const responseHash = responseURI ? keccak256(stringToHex(responseURI)) : ZERO_HASH;
+    await ensureSepolia();
     status("respondStatus", "Sending transaction. Confirm in your wallet...");
     const hash = await walletClient.writeContract({
       address: prefill.validationRegistry, abi: validationAbi, functionName: "validationResponse",
@@ -256,7 +270,7 @@ $("respond").addEventListener("click", async () => {
     await publicClient.waitForTransactionReceipt({ hash });
     status("respondStatus", "Response recorded! View: https://sepolia.basescan.org/tx/" + hash, "ok");
   } catch (e) {
-    status("respondStatus", e.shortMessage || e.message || String(e), "err");
+    status("respondStatus", errMsg(e), "err");
   } finally {
     btn.disabled = false;
   }
@@ -275,19 +289,19 @@ $("readStatus").addEventListener("click", async () => {
   try {
     if (!$("respondHash").value) { status("readStatusMsg", "Enter a requestHash in step 2 first.", "err"); return; }
     await read("getValidationStatus", [$("respondHash").value]);
-  } catch (e) { status("readStatusMsg", e.shortMessage || e.message || String(e), "err"); }
+  } catch (e) { status("readStatusMsg", errMsg(e), "err"); }
 });
 $("readSummary").addEventListener("click", async () => {
   try {
     if ($("agentId").value === "") { status("readStatusMsg", "Enter an agentId first.", "err"); return; }
     await read("getSummary", [BigInt($("agentId").value), $("validator").value ? [$("validator").value] : [], $("tag").value]);
-  } catch (e) { status("readStatusMsg", e.shortMessage || e.message || String(e), "err"); }
+  } catch (e) { status("readStatusMsg", errMsg(e), "err"); }
 });
 $("readList").addEventListener("click", async () => {
   try {
     if ($("agentId").value === "") { status("readStatusMsg", "Enter an agentId first.", "err"); return; }
     await read("getAgentValidations", [BigInt($("agentId").value)]);
-  } catch (e) { status("readStatusMsg", e.shortMessage || e.message || String(e), "err"); }
+  } catch (e) { status("readStatusMsg", errMsg(e), "err"); }
 });
 </script>
 </body>
