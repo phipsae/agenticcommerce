@@ -17,6 +17,8 @@ describe("banana paid secret MVP", () => {
     erc8004ChainId: 8453,
     erc8004IdentityRegistry: "0x8004A169FB4a3325136EB29fA0ceB6D2e539a432",
     erc8004ReputationRegistry: "0x8004BAa17C55a88189AE136b182e5fdA19dE9b63",
+    erc8004SepoliaIdentityRegistry: "0x8004AA63c570c570eBF15376c0dB199918BFe9Fb",
+    erc8004SepoliaValidationRegistry: "0x8004C269D0A5647E51E121FeB226200ECE932d55",
   });
 
   it("returns x402-style HTTP 402 payment requirements when unpaid", async () => {
@@ -113,6 +115,18 @@ describe("banana paid secret MVP", () => {
     expect(res.text).toContain("https://banana.example/secret");
     expect(res.text).toContain("x402-paid-secret-delivery");
     expect(res.text).toContain("giveFeedback");
+  });
+
+  it("serves the validation playground page targeting Base Sepolia", async () => {
+    const res = await request(app).get("/validation").expect(200);
+
+    expect(res.headers["content-type"]).toContain("text/html");
+    expect(res.text).toContain("0x8004C269D0A5647E51E121FeB226200ECE932d55");
+    expect(res.text).toContain("0x8004AA63c570c570eBF15376c0dB199918BFe9Fb");
+    expect(res.text).toContain("84532");
+    expect(res.text).toContain("validationRequest");
+    expect(res.text).toContain("validationResponse");
+    expect(res.text).toContain("https://banana.example/validation/banana-secret.json");
   });
 
   it("has a health endpoint", async () => {

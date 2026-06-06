@@ -14,6 +14,8 @@ export type AppConfig = {
   erc8004IdentityRegistry?: `0x${string}`;
   erc8004ReputationRegistry?: `0x${string}`;
   erc8004ValidationRegistry?: `0x${string}`;
+  erc8004SepoliaIdentityRegistry: `0x${string}`;
+  erc8004SepoliaValidationRegistry: `0x${string}`;
 };
 
 function required(name: string, fallback?: string): string {
@@ -59,5 +61,16 @@ export function configFromEnv(): AppConfig {
     erc8004IdentityRegistry: optionalAddress("ERC8004_IDENTITY_REGISTRY"),
     erc8004ReputationRegistry: optionalAddress("ERC8004_REPUTATION_REGISTRY"),
     erc8004ValidationRegistry: optionalAddress("ERC8004_VALIDATION_REGISTRY"),
+    // Base Sepolia (84532) registries for the /validation playground.
+    // The Validation Registry is only deployed on testnet; its linked Identity
+    // Registry is NOT the canonical 0x8004A818... one, so register there.
+    erc8004SepoliaIdentityRegistry: requiredAddress(
+      "ERC8004_SEPOLIA_IDENTITY_REGISTRY",
+      "0x8004AA63c570c570eBF15376c0dB199918BFe9Fb",
+    ),
+    erc8004SepoliaValidationRegistry: requiredAddress(
+      "ERC8004_SEPOLIA_VALIDATION_REGISTRY",
+      "0x8004C269D0A5647E51E121FeB226200ECE932d55",
+    ),
   };
 }
