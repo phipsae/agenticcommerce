@@ -158,9 +158,16 @@ $("connect").addEventListener("click", async () => {
     if (!window.ethereum) { status("connectStatus", "No browser wallet found. Install MetaMask or Rabby.", "err"); return; }
     walletClient = createWalletClient({ chain: baseSepolia, transport: custom(window.ethereum) });
     [account] = await walletClient.requestAddresses();
-    await walletClient.switchChain({ id: baseSepolia.id }).catch(async (e) => {
-      if (e.code === 4902) await walletClient.addChain({ chain: baseSepolia }); else throw e;
-    });
+    try {
+      await walletClient.switchChain({ id: baseSepolia.id });
+    } catch (e) {
+      // MetaMask reports -32603 "internal error" instead of the spec'd 4902
+      // when the chain isn't added yet, so on any failure that isn't a user
+      // rejection, add Base Sepolia and switch again.
+      if (e.code === 4001 || e.cause?.code === 4001) throw e;
+      await walletClient.addChain({ chain: baseSepolia });
+      await walletClient.switchChain({ id: baseSepolia.id });
+    }
     publicClient = createPublicClient({ chain: baseSepolia, transport: custom(window.ethereum) });
     if (!$("validator").value) $("validator").value = account;
     for (const id of ["register", "request", "respond", "readStatus", "readSummary", "readList"]) $(id).disabled = false;
