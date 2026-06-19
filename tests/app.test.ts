@@ -19,6 +19,8 @@ describe("banana paid secret MVP", () => {
     erc8004ReputationRegistry: "0x8004BAa17C55a88189AE136b182e5fdA19dE9b63",
     erc8004SepoliaIdentityRegistry: "0x8004AA63c570c570eBF15376c0dB199918BFe9Fb",
     erc8004SepoliaValidationRegistry: "0x8004C269D0A5647E51E121FeB226200ECE932d55",
+    escrow8183Address: "0x8183000000000000000000000000000000008183",
+    escrowTokenAddress: "0x05DC00000000000000000000000000000000C0DE",
   });
 
   it("returns x402-style HTTP 402 payment requirements when unpaid", async () => {
@@ -127,6 +129,32 @@ describe("banana paid secret MVP", () => {
     expect(res.text).toContain("validationRequest");
     expect(res.text).toContain("validationResponse");
     expect(res.text).toContain("https://banana.example/validation/banana-secret.json");
+  });
+
+  it("serves the ERC-8183 escrow playground page targeting Base Sepolia", async () => {
+    const res = await request(app).get("/escrow").expect(200);
+
+    expect(res.headers["content-type"]).toContain("text/html");
+    expect(res.text).toContain("0x8183000000000000000000000000000000008183");
+    expect(res.text).toContain("0x05DC00000000000000000000000000000000C0DE");
+    expect(res.text).toContain("84532");
+    expect(res.text).toContain("createJob");
+    expect(res.text).toContain("ERC-8004 validator");
+    // canonical ERC-8183 surface: budget is its own step, fund takes a
+    // front-run guard, complete carries the evaluator's attestation reason.
+    expect(res.text).toContain("setBudget");
+    expect(res.text).toContain("expectedBudget");
+  });
+
+  it("serves an overview page at the root linking every subpage", async () => {
+    const res = await request(app).get("/").expect(200);
+
+    expect(res.headers["content-type"]).toContain("text/html");
+    expect(res.text).toContain("Banana Secret Agent");
+    for (const href of ["/secret", "/register", "/review", "/validation", "/escrow"]) {
+      expect(res.text).toContain(`href="${href}"`);
+    }
+    expect(res.text).toContain("/.well-known/agent-registration.json");
   });
 
   it("has a health endpoint", async () => {

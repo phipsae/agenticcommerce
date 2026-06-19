@@ -1,9 +1,11 @@
 import express from "express";
 import type { AppConfig } from "./config.js";
 import { agentRegistration, validationEvidence } from "./metadata.js";
+import { homePage } from "./homePage.js";
 import { registerPage } from "./registerPage.js";
 import { reviewPage } from "./reviewPage.js";
 import { validationPage } from "./validationPage.js";
+import { escrowPage } from "./escrowPage.js";
 import { createPaymentMiddleware } from "./payment.js";
 import { SECRET, secretHash } from "./secret.js";
 
@@ -16,6 +18,10 @@ export function createApp(config: AppConfig) {
   app.set("trust proxy", true);
 
   app.use(express.json());
+
+  app.get("/", (_req, res) => {
+    res.type("html").send(homePage(config));
+  });
 
   app.get("/health", (_req, res) => {
     res.json({ ok: true, service: "banana-secret-agent" });
@@ -39,6 +45,10 @@ export function createApp(config: AppConfig) {
 
   app.get("/validation", (_req, res) => {
     res.type("html").send(validationPage(config));
+  });
+
+  app.get("/escrow", (_req, res) => {
+    res.type("html").send(escrowPage(config));
   });
 
   app.use(createPaymentMiddleware(config));

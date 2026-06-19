@@ -16,6 +16,9 @@ export type AppConfig = {
   erc8004ValidationRegistry?: `0x${string}`;
   erc8004SepoliaIdentityRegistry: `0x${string}`;
   erc8004SepoliaValidationRegistry: `0x${string}`;
+  // ERC-8183 escrow showcase, Base Sepolia only (no canonical deployment exists).
+  escrow8183Address: `0x${string}`;
+  escrowTokenAddress: `0x${string}`;
 };
 
 function required(name: string, fallback?: string): string {
@@ -71,6 +74,17 @@ export function configFromEnv(): AppConfig {
     erc8004SepoliaValidationRegistry: requiredAddress(
       "ERC8004_SEPOLIA_VALIDATION_REGISTRY",
       "0x8004C269D0A5647E51E121FeB226200ECE932d55",
+    ),
+    // Our own ERC-8183 escrow + a mock USDC faucet token on Base Sepolia.
+    // ERC-8183 is a Draft with no canonical deployment, so we deploy our own.
+    // Defaults are the zero address until `deploy:escrow` fills them in.
+    escrow8183Address: requiredAddress(
+      "ESCROW8183_ADDRESS",
+      "0x0000000000000000000000000000000000000000",
+    ),
+    escrowTokenAddress: requiredAddress(
+      "ESCROW_TOKEN_ADDRESS",
+      "0x0000000000000000000000000000000000000000",
     ),
   };
 }
